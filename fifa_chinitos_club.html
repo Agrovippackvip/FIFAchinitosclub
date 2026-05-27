@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FIFA Chinitos Club</title>
+<style>
+body{
+    margin:0;
+    font-family:Arial, sans-serif;
+    background:linear-gradient(135deg,#0b1020,#111827,#1e3a8a);
+    color:white;
+}
+header{
+    padding:20px;
+    text-align:center;
+    background:rgba(0,0,0,0.4);
+    box-shadow:0 2px 10px rgba(0,0,0,0.5);
+}
+h1{
+    margin:0;
+    font-size:3rem;
+    letter-spacing:2px;
+}
+.container{
+    padding:20px;
+    max-width:1200px;
+    margin:auto;
+}
+.card{
+    background:rgba(255,255,255,0.08);
+    border-radius:18px;
+    padding:20px;
+    margin-bottom:20px;
+    backdrop-filter:blur(8px);
+}
+input, select, button{
+    padding:10px;
+    border:none;
+    border-radius:10px;
+    margin:5px;
+}
+button{
+    background:#2563eb;
+    color:white;
+    cursor:pointer;
+    font-weight:bold;
+}
+button:hover{
+    background:#1d4ed8;
+}
+table{
+    width:100%;
+    border-collapse:collapse;
+    margin-top:10px;
+}
+th, td{
+    padding:10px;
+    border-bottom:1px solid rgba(255,255,255,0.1);
+    text-align:center;
+}
+.match{
+    padding:10px;
+    margin:10px 0;
+    background:rgba(255,255,255,0.05);
+    border-radius:10px;
+}
+.tv-grid{
+    display:grid;
+    grid-template-columns:repeat(auto-fit,minmax(220px,1fr));
+    gap:10px;
+}
+.logo{
+    width:32px;
+    vertical-align:middle;
+    margin-right:8px;
+}
+footer{
+    text-align:center;
+    padding:20px;
+    opacity:0.7;
+}
+</style>
+</head>
+<body>
+
+<header>
+    <h1>⚽ FIFA Chinitos Club</h1>
+    <p>Modo Champions • Fixture Inteligente • Historial Global</p>
+</header>
+
+<div class="container">
+
+<div class="card">
+    <h2>🎮 Crear Torneo</h2>
+
+    <label>Tipo:</label>
+    <select id="mode">
+        <option value="clubes">Clubes</option>
+        <option value="selecciones">Selecciones</option>
+    </select>
+
+    <label>TVs:</label>
+    <select id="tvs">
+        <option>1</option>
+        <option>2</option>
+        <option>3</option>
+        <option selected>4</option>
+    </select>
+
+    <h3>Jugadores</h3>
+    <textarea id="players" rows="8" style="width:100%; border-radius:10px; padding:10px;"
+    placeholder="Un jugador por línea"></textarea>
+
+    <button onclick="startTournament()">Crear Torneo</button>
+</div>
+
+<div class="card">
+    <h2>🏟 Equipos Asignados</h2>
+    <div id="teams"></div>
+</div>
+
+<div class="card">
+    <h2>📅 Fixture</h2>
+    <div id="fixture"></div>
+</div>
+
+<div class="card">
+    <h2>📊 Tabla</h2>
+    <table id="table">
+        <thead>
+            <tr>
+                <th>Jugador</th>
+                <th>Pts</th>
+                <th>GF</th>
+                <th>GC</th>
+                <th>DG</th>
+            </tr>
+        </thead>
+        <tbody></tbody>
+    </table>
+</div>
+
+<div class="card">
+    <h2>🏆 Historial</h2>
+    <div id="history"></div>
+</div>
+
+</div>
+
+<footer>
+FIFA Chinitos Club © 2026
+</footer>
+
+<script>
+const clubes = [
+"Real Madrid","Manchester City","PSG","Liverpool",
+"Bayern Munich","Barcelona","Inter","Arsenal",
+"Chelsea","Juventus","Milan","Dortmund"
+];
+
+const selecciones = [
+"Argentina","Brasil","Francia","España",
+"Inglaterra","Portugal","Alemania","Italia",
+"Países Bajos","Uruguay","Croacia","Bélgica"
+];
+
+let standings = [];
+
+function shuffle(array){
+    for(let i=array.length-1;i>0;i--){
+        const j=Math.floor(Math.random()*(i+1));
+        [array[i],array[j]]=[array[j],array[i]];
+    }
+    return array;
+}
+
+function startTournament(){
+    const playerInput = document.getElementById("players").value
+        .split("\n")
+        .map(p=>p.trim())
+        .filter(p=>p.length>0);
+
+    const mode = document.getElementById("mode").value;
+
+    if(playerInput.length < 2){
+        alert("Ingresa al menos 2 jugadores");
+        return;
+    }
+
+    const pool = mode === "clubes" ? [...clubes] : [...selecciones];
+
+    shuffle(pool);
+
+    const assignments = playerInput.map((p,i)=>({
+        player:p,
+        team:pool[i]
+    }));
+
+    standings = playerInput.map(p=>({
+        player:p,
+        pts:0,
+        gf:0,
+        gc:0
+    }));
+
+    renderTeams(assignments);
+    generateFixture(playerInput);
+    updateTable();
+}
+
+function renderTeams(assignments){
+    const div = document.getElementById("teams");
+    div.innerHTML = "";
+
+    assignments.forEach(a=>{
+        div.innerHTML += `
+        <div class="match">
+            <strong>${a.player}</strong> → ${a.team}
+        </div>`;
+    });
+}
+
+function generateFixture(players){
+    const fixture = document.getElementById("fixture");
+    fixture.innerHTML = "";
+
+    let round = 1;
+
+    for(let i=0;i<players.length;i++){
+        for(let j=i+1;j<players.length;j++){
+
+            fixture.innerHTML += `
+            <div class="match">
+                <strong>Fecha ${round}</strong><br>
+                ${players[i]} vs ${players[j]}
+                <br><br>
+                <input type="number" id="g1_${i}_${j}" min="0" placeholder="Gol local">
+                <input type="number" id="g2_${i}_${j}" min="0" placeholder="Gol visitante">
+                <button onclick="saveResult('${players[i]}','${players[j]}','g1_${i}_${j}','g2_${i}_${j}')">
+                    Guardar
+                </button>
+            </div>
+            `;
+
+            round++;
+        }
+    }
+}
+
+function saveResult(p1,p2,id1,id2){
+    const g1 = parseInt(document.getElementById(id1).value);
+    const g2 = parseInt(document.getElementById(id2).value);
+
+    if(isNaN(g1) || isNaN(g2)){
+        alert("Ingresa resultados válidos");
+        return;
+    }
+
+    const a = standings.find(s=>s.player===p1);
+    const b = standings.find(s=>s.player===p2);
+
+    a.gf += g1;
+    a.gc += g2;
+
+    b.gf += g2;
+    b.gc += g1;
+
+    if(g1>g2){
+        a.pts +=3;
+    }else if(g2>g1){
+        b.pts +=3;
+    }else{
+        a.pts +=1;
+        b.pts +=1;
+    }
+
+    updateTable();
+    saveHistory();
+}
+
+function updateTable(){
+    standings.sort((a,b)=>(b.pts-a.pts)||((b.gf-b.gc)-(a.gf-a.gc)));
+
+    const tbody = document.querySelector("#table tbody");
+    tbody.innerHTML="";
+
+    standings.forEach(s=>{
+        tbody.innerHTML += `
+        <tr>
+            <td>${s.player}</td>
+            <td>${s.pts}</td>
+            <td>${s.gf}</td>
+            <td>${s.gc}</td>
+            <td>${s.gf-s.gc}</td>
+        </tr>`;
+    });
+}
+
+function saveHistory(){
+    localStorage.setItem("fifaChinitosHistory", JSON.stringify(standings));
+    renderHistory();
+}
+
+function renderHistory(){
+    const history = JSON.parse(localStorage.getItem("fifaChinitosHistory")) || [];
+    const div = document.getElementById("history");
+
+    div.innerHTML = "";
+
+    history.forEach(h=>{
+        div.innerHTML += `
+        <div class="match">
+            ${h.player} - ${h.pts} pts
+        </div>`;
+    });
+}
+
+renderHistory();
+</script>
+
+</body>
+</html>
